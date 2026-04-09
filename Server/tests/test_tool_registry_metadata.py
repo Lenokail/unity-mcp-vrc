@@ -62,3 +62,7 @@ def test_tool_registry_rejects_invalid_unity_target_values():
         @mcp_for_unity_tool(unity_target=123)  # type: ignore[arg-type]
         def _invalid_non_string_target_tool():
             return None
+
+
+def test_vrchat_group_is_registered():
+    assert "vrchat" in tool_registry_module.TOOL_GROUPS
