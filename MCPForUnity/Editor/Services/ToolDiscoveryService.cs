@@ -277,8 +277,7 @@ namespace MCPForUnity.Editor.Services
             if (vrchatHandlerPresent && !_cachedTools.ContainsKey("manage_vrchat_udon"))
             {
                 McpLog.Warn(
-                    "MCP: ManageVRChatUdon exists in assembly but was not registered (TypeCache/metadata issue). Try Assets > Reimport All or restart the Editor.",
-                    false);
+                    "MCP: ManageVRChatUdon exists in assembly but was not registered (TypeCache/metadata issue). Try Assets > Reimport All or restart the Editor.");
             }
         }
 
