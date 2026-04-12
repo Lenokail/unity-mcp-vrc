@@ -17,7 +17,7 @@ namespace MCPForUnity.Editor.Tools
 {
     [McpForUnityTool(
         "manage_vrchat_udon",
-        AutoRegister = false,
+        AutoRegister = true,
         Group = "vrchat",
         Description = "VRChat UdonSharp helper: check environment, create Udon# script with ProgramAsset, attach UdonBehaviour with Program Source, generate sync/network templates, and validate networking anti-patterns."
     )]
