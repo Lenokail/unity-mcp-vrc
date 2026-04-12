@@ -21,7 +21,7 @@ ALL_ACTIONS: list[str] = list(get_args(VRChatUdonAction))
 
 
 @mcp_for_unity_tool(
-    group="vrchat",
+    group="core",
     description=(
         "Create and wire VRChat UdonSharp scripts, then validate networking setup.\n\n"
         "Use this tool when building VRChat Worlds with Udon# (Unity 2022.3.22f1).\n"

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using MCPForUnity.Editor.Constants;
 using MCPForUnity.Editor.Helpers;
+using MCPForUnity.Editor.Services.Transport;
 using MCPForUnity.Editor.Tools;
 using UnityEditor;
 
@@ -228,6 +230,54 @@ namespace MCPForUnity.Editor.Services
             {
                 bool defaultValue = metadata.AutoRegister || metadata.IsBuiltIn;
                 EditorPrefs.SetBool(key, defaultValue);
+                return;
+            }
+
+            // Older package wrote false when AutoRegister was false; prefs persist after AutoRegister=true.
+            if (string.Equals(metadata.Name, "manage_vrchat_udon", StringComparison.Ordinal)
+                && metadata.AutoRegister
+                && !EditorPrefs.GetBool(key, true)
+                && !EditorPrefs.HasKey(EditorPrefKeys.MigrationManageVrchatUdonAutoRegisterV1))
+            {
+                EditorPrefs.SetBool(key, true);
+                EditorPrefs.SetBool(EditorPrefKeys.MigrationManageVrchatUdonAutoRegisterV1, true);
+                McpLog.Info(
+                    "MCP: enabled manage_vrchat_udon (default is now on). Disable it in MCP > Tools if you do not need it.",
+                    false);
+                ScheduleReregisterToolsAfterPreferenceMigration();
+            }
+        }
+
+        private static void ScheduleReregisterToolsAfterPreferenceMigration()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                _ = ReregisterToolsAfterPreferenceMigrationAsync();
+            };
+        }
+
+        private static async Task ReregisterToolsAfterPreferenceMigrationAsync()
+        {
+            try
+            {
+                var tm = MCPServiceLocator.TransportManager;
+                foreach (TransportMode mode in new[] { TransportMode.Http, TransportMode.Stdio })
+                {
+                    if (!tm.IsRunning(mode))
+                    {
+                        continue;
+                    }
+
+                    var client = tm.GetClient(mode);
+                    if (client != null)
+                    {
+                        await client.ReregisterToolsAsync().ConfigureAwait(true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                McpLog.Warn($"MCP: could not re-register tools after preference migration: {ex.Message}");
             }
         }
 

@@ -44,6 +44,13 @@ namespace MCPForUnity.Editor.Constants
         internal const string LockCursorConfig = "MCPForUnity.LockCursorConfig";
         internal const string AutoRegisterEnabled = "MCPForUnity.AutoRegisterEnabled";
         internal const string ToolEnabledPrefix = "MCPForUnity.ToolEnabled.";
+
+        /// <summary>
+        /// One-time migration: older builds defaulted manage_vrchat_udon off in EditorPrefs;
+        /// after AutoRegister=true, re-align pref so MCP lists the tool unless user opted out post-migration.
+        /// </summary>
+        internal const string MigrationManageVrchatUdonAutoRegisterV1 =
+            "MCPForUnity.Migration.manage_vrchat_udon_autoregister_v1";
         internal const string ToolFoldoutStatePrefix = "MCPForUnity.ToolFoldout.";
         internal const string ResourceEnabledPrefix = "MCPForUnity.ResourceEnabled.";
         internal const string ResourceFoldoutStatePrefix = "MCPForUnity.ResourceFoldout.";
