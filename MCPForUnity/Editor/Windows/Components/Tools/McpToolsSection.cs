@@ -46,6 +46,7 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
             { "testing", "Testing" },
             { "probuilder", "ProBuilder — Experimental" },
             { "profiling", "Profiling & Frame Debugger" },
+            { "vrchat", "VRChat" },
         };
 
         public VisualElement Root { get; }

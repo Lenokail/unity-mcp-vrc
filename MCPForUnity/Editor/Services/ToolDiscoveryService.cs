@@ -28,33 +28,12 @@ namespace MCPForUnity.Editor.Services
             var toolTypes = TypeCache.GetTypesWithAttribute<McpForUnityToolAttribute>();
             foreach (var type in toolTypes)
             {
-                McpForUnityToolAttribute toolAttr;
-                try
-                {
-                    toolAttr = type.GetCustomAttribute<McpForUnityToolAttribute>();
-                }
-                catch (Exception ex)
-                {
-                    McpLog.Warn($"Failed to read [McpForUnityTool] for {type.FullName}: {ex.Message}");
-                    continue;
-                }
-
-                if (toolAttr == null)
-                {
-                    continue;
-                }
-
-                var metadata = ExtractToolMetadata(type, toolAttr);
-                if (metadata != null)
-                {
-                    if (_cachedTools.ContainsKey(metadata.Name))
-                    {
-                        McpLog.Warn($"Duplicate tool name '{metadata.Name}' from {type.FullName}; overwriting previous registration.");
-                    }
-                    _cachedTools[metadata.Name] = metadata;
-                    EnsurePreferenceInitialized(metadata);
-                }
+                TryRegisterToolType(type, allowOverwrite: true);
             }
+
+            // TypeCache can lag behind new scripts until the script type hash refreshes.
+            // Scan our Editor assembly so tools like manage_vrchat_udon are never omitted.
+            DiscoverToolsFromExecutingAssemblySupplement();
 
             McpLog.Info($"Discovered {_cachedTools.Count} MCP tools via reflection", false);
             return _cachedTools.Values.ToList();
@@ -212,6 +191,96 @@ namespace MCPForUnity.Editor.Services
         }
 
         private string ConvertToSnakeCase(string input) => StringCaseUtility.ToSnakeCase(input);
+
+        private void TryRegisterToolType(Type type, bool allowOverwrite)
+        {
+            McpForUnityToolAttribute toolAttr;
+            try
+            {
+                toolAttr = type.GetCustomAttribute<McpForUnityToolAttribute>();
+            }
+            catch (Exception ex)
+            {
+                McpLog.Warn($"Failed to read [McpForUnityTool] for {type.FullName}: {ex.Message}");
+                return;
+            }
+
+            if (toolAttr == null)
+            {
+                return;
+            }
+
+            var metadata = ExtractToolMetadata(type, toolAttr);
+            if (metadata == null)
+            {
+                return;
+            }
+
+            if (_cachedTools.ContainsKey(metadata.Name))
+            {
+                if (!allowOverwrite)
+                {
+                    return;
+                }
+
+                McpLog.Warn($"Duplicate tool name '{metadata.Name}' from {type.FullName}; overwriting previous registration.");
+            }
+
+            _cachedTools[metadata.Name] = metadata;
+            EnsurePreferenceInitialized(metadata);
+        }
+
+        /// <summary>
+        /// TypeCache can omit newly added tools until the editor script type hash updates.
+        /// Merge any [McpForUnityTool] types from this assembly that are not already registered.
+        /// </summary>
+        private void DiscoverToolsFromExecutingAssemblySupplement()
+        {
+            Assembly asm;
+            try
+            {
+                asm = Assembly.GetExecutingAssembly();
+            }
+            catch (Exception ex)
+            {
+                McpLog.Warn($"MCP tool discovery: could not get executing assembly: {ex.Message}");
+                return;
+            }
+
+            Type[] types;
+            try
+            {
+                types = asm.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types.Where(t => t != null).ToArray();
+            }
+            catch (Exception ex)
+            {
+                McpLog.Warn($"MCP tool discovery: GetTypes failed for {asm.GetName().Name}: {ex.Message}");
+                return;
+            }
+
+            foreach (var type in types)
+            {
+                if (!type.IsClass)
+                {
+                    continue;
+                }
+
+                TryRegisterToolType(type, allowOverwrite: false);
+            }
+
+            bool vrchatHandlerPresent = types.Any(t =>
+                string.Equals(t.Name, "ManageVRChatUdon", StringComparison.Ordinal));
+            if (vrchatHandlerPresent && !_cachedTools.ContainsKey("manage_vrchat_udon"))
+            {
+                McpLog.Warn(
+                    "MCP: ManageVRChatUdon exists in assembly but was not registered (TypeCache/metadata issue). Try Assets > Reimport All or restart the Editor.",
+                    false);
+            }
+        }
 
         public void InvalidateCache()
         {
